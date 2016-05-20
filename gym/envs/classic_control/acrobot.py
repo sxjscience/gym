@@ -162,6 +162,7 @@ class AcrobotEnv(core.Env):
         if close:
             if self.viewer is not None:
                 self.viewer.close()
+                self.viewer = None
             return
 
         s = self.state
@@ -193,7 +194,7 @@ class AcrobotEnv(core.Env):
         self.viewer.render()
         if mode == 'rgb_array':
             return self.viewer.get_array()
-        elif mode is 'human':
+        elif mode == 'human':
             pass
 
 def wrap(x, m, M):

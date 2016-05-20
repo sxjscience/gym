@@ -76,8 +76,37 @@ register(
     reward_threshold=-100
 )
 
+# Box2d
+# ----------------------------------------
+
+register(
+    id='LunarLander-v1',
+    entry_point='gym.envs.box2d:LunarLander',
+    timestep_limit=1000,
+    reward_threshold=200,
+)
+
+register(
+    id='BipedalWalker-v1',
+    entry_point='gym.envs.box2d:BipedalWalker',
+    timestep_limit=1600,
+    reward_threshold=300,
+)
+
+register(
+    id='BipedalWalkerHardcore-v1',
+    entry_point='gym.envs.box2d:BipedalWalkerHardcore',
+    timestep_limit=2000,
+    reward_threshold=300,
+)
+
 # Toy Text
 # ----------------------------------------
+
+register(
+    id='Blackjack-v0',
+    entry_point='gym.envs.toy_text:BlackjackEnv',
+)
 
 register(
     id='FrozenLake-v0',
@@ -94,13 +123,19 @@ register(
 )
 
 register(
+    id='NChain-v0',
+    entry_point='gym.envs.toy_text:NChainEnv',
+    timestep_limit=1000,
+)
+
+register(
     id='Roulette-v0',
     entry_point='gym.envs.toy_text:RouletteEnv',
     timestep_limit=100,
 )
 
 register(
-    id='Taxi-v0',
+    id='Taxi-v1',
     entry_point='gym.envs.toy_text.taxi:TaxiEnv',
     timestep_limit=200,
 )
@@ -111,48 +146,48 @@ register(
 # 2D
 
 register(
-    id='Reacher-v0',
+    id='Reacher-v1',
     entry_point='gym.envs.mujoco:ReacherEnv',
     timestep_limit=50
 )
 
 register(
-    id='InvertedPendulum-v0',
+    id='InvertedPendulum-v1',
     entry_point='gym.envs.mujoco:InvertedPendulumEnv',
 )
 
 register(
-    id='InvertedDoublePendulum-v0',
+    id='InvertedDoublePendulum-v1',
     entry_point='gym.envs.mujoco:InvertedDoublePendulumEnv',
 )
 
 register(
-    id='HalfCheetah-v0',
+    id='HalfCheetah-v1',
     entry_point='gym.envs.mujoco:HalfCheetahEnv',
 )
 
 register(
-    id='Hopper-v0',
+    id='Hopper-v1',
     entry_point='gym.envs.mujoco:HopperEnv',
 )
 
 register(
-    id='Swimmer-v0',
+    id='Swimmer-v1',
     entry_point='gym.envs.mujoco:SwimmerEnv',
 )
 
 register(
-    id='Walker2d-v0',
+    id='Walker2d-v1',
     entry_point='gym.envs.mujoco:Walker2dEnv',
 )
 
 register(
-    id='Ant-v0',
+    id='Ant-v1',
     entry_point='gym.envs.mujoco:AntEnv',
 )
 
 register(
-    id='Humanoid-v0',
+    id='Humanoid-v1',
     entry_point='gym.envs.mujoco:HumanoidEnv',
 )
 
@@ -206,4 +241,64 @@ register(
         'illegal_move_mode': 'lose',
         'board_size': 19,
     },
+)
+
+register(
+    id='Hex9x9-v0',
+    entry_point='gym.envs.board_game:HexEnv',
+    kwargs={
+        'player_color': 'black',
+        'opponent': 'random',
+        'observation_type': 'numpy3c',
+        'illegal_move_mode': 'lose',
+        'board_size': 9,
+    },
+)
+
+# Doom
+# ----------------------------------------
+
+register(
+    id='DoomBasic-v0',
+    entry_point='gym.envs.doom:DoomBasicEnv',
+)
+
+register(
+    id='DoomCorridor-v0',
+    entry_point='gym.envs.doom:DoomCorridorEnv',
+)
+
+register(
+    id='DoomDefendCenter-v0',
+    entry_point='gym.envs.doom:DoomDefendCenterEnv',
+)
+
+register(
+    id='DoomDefendLine-v0',
+    entry_point='gym.envs.doom:DoomDefendLineEnv',
+)
+
+register(
+    id='DoomHealthGathering-v0',
+    entry_point='gym.envs.doom:DoomHealthGatheringEnv',
+)
+
+register(
+    id='DoomMyWayHome-v0',
+    entry_point='gym.envs.doom:DoomMyWayHomeEnv',
+)
+
+register(
+    id='DoomPredictPosition-v0',
+    entry_point='gym.envs.doom:DoomPredictPositionEnv',
+)
+
+register(
+    id='DoomTakeCover-v0',
+    entry_point='gym.envs.doom:DoomTakeCoverEnv',
+)
+
+register(
+    id='DoomDeathmatch-v0',
+    entry_point='gym.envs.doom:DoomDeathmatchEnv',
 )

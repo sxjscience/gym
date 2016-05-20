@@ -1,5 +1,5 @@
 import logging
-import os
+import os, sys
 
 import gym
 
@@ -14,11 +14,11 @@ class RandomAgent(object):
 if __name__ == '__main__':
     # You can optionally set up the logger. Also fine to set the level
     # to logging.DEBUG or logging.WARN if you want to change the
-    # amount of outut.
+    # amount of output.
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
-    env = gym.make('CartPole-v0')
+    env = gym.make('CartPole-v0' if len(sys.argv)<2 else sys.argv[1])
     agent = RandomAgent(env.action_space)
 
     # You provide the directory to write to (can be an existing
@@ -27,15 +27,15 @@ if __name__ == '__main__':
     outdir = '/tmp/random-agent-results'
     env.monitor.start(outdir, force=True)
 
-    episode_count = 200
-    max_steps = 100
+    episode_count = 100
+    max_steps = 200
     reward = 0
     done = False
 
-    for i in xrange(episode_count):
+    for i in range(episode_count):
         ob = env.reset()
 
-        for j in xrange(max_steps):
+        for j in range(max_steps):
             action = agent.act(ob, reward, done)
             ob, reward, done, _ = env.step(action)
             if done:

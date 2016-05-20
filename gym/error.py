@@ -11,6 +11,12 @@ class UnregisteredEnv(Error):
     """
     pass
 
+class DeprecatedEnv(Error):
+    """Raised when the user requests an env from the registry with an older version
+    number than the latest env with the same name.
+    """
+    pass
+
 class DependencyNotInstalled(Error):
     pass
 
@@ -29,6 +35,12 @@ class ResetNeeded(Exception):
 class ResetNotAllowed(Exception):
     """When the monitor is active, raised when the user tries to step an
     environment that's not yet done.
+    """
+    pass
+
+class InvalidAction(Exception):
+    """Raised when the user performs an action not contained within the
+    action space
     """
     pass
 

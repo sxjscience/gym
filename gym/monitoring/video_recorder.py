@@ -4,9 +4,11 @@ import os
 import subprocess
 import tempfile
 import os.path
-import distutils.spawn
+import distutils.spawn, distutils.version
 import numpy as np
-import StringIO
+from six import StringIO
+import six
+import six.moves.urllib as urlparse
 
 from gym import error
 
@@ -34,22 +36,26 @@ class VideoRecorder(object):
 
     def __init__(self, env, path=None, metadata=None, enabled=True, base_path=None):
         modes = env.metadata.get('render.modes', [])
+        self.enabled = enabled
+
+        # Don't bother setting anything else if not enabled
+        if not self.enabled:
+            return
+
         self.ansi_mode = False
         if 'rgb_array' not in modes:
             if 'ansi' in modes:
                 self.ansi_mode = True
             else:
                 logger.info('Disabling video recorder because {} neither supports video mode "rgb_array" nor "ansi".'.format(env))
-                enabled = False
+                # Whoops, turns out we shouldn't be enabled after all
+                self.enabled = False
+                return
 
         if path is not None and base_path is not None:
             raise error.Error("You can pass at most one of `path` or `base_path`.")
 
-        self.enabled = enabled
         self.last_frame = None
-        if not self.enabled:
-            return
-
         self.env = env
 
         required_ext = '.json' if self.ansi_mode else '.mp4'
@@ -179,18 +185,20 @@ class TextEncoder(object):
         string = None
         if isinstance(frame, str):
             string = frame
-        elif isinstance(frame, StringIO.StringIO):
+        elif isinstance(frame, StringIO):
             string = frame.getvalue()
         else:
             raise error.InvalidFrame('Wrong type {} for {}: text frame must be a string or StringIO'.format(type(frame), frame))
 
-        if string[-1] != '\n':
+        frame_bytes = string.encode('utf-8')
+
+        if frame_bytes[-1:] != six.b('\n'):
             raise error.InvalidFrame('Frame must end with a newline: """{}"""'.format(string))
 
-        if '\r\n' in string:
+        if six.b('\r') in frame_bytes:
             raise error.InvalidFrame('Frame contains carriage returns (only newlines are allowed: """{}"""'.format(string))
 
-        self.frames.append(string)
+        self.frames.append(frame_bytes)
 
     def close(self):
         #frame_duration = float(1) / self.frames_per_sec
@@ -199,13 +207,14 @@ class TextEncoder(object):
         # Turn frames into events: clear screen beforehand
         # https://rosettacode.org/wiki/Terminal_control/Clear_the_screen#Python
         # https://rosettacode.org/wiki/Terminal_control/Cursor_positioning#Python
-        clear_code = "%c[2J\033[1;1H" % (27)
-        events = [ (frame_duration, clear_code+frame.replace('\n','\r\n')) for frame in self.frames ]
+        clear_code = six.b("%c[2J\033[1;1H" % (27))
+        # Decode the bytes as UTF-8 since JSON may only contain UTF-8
+        events = [ (frame_duration, (clear_code+frame.replace(six.b('\n'),six.b('\r\n'))).decode('utf-8'))  for frame in self.frames ]
 
         # Calculate frame size from the largest frames.
         # Add some padding since we'll get cut off otherwise.
-        height = max([frame.count('\n') for frame in self.frames]) + 1
-        width = max([max([len(line) for line in frame.split('\n')])]) + 2
+        height = max([frame.count(six.b('\n')) for frame in self.frames]) + 1
+        width = max([max([len(line) for line in frame.split(six.b('\n'))]) for frame in self.frames]) + 2
 
         data = {
             "version": 1,
@@ -249,7 +258,7 @@ class ImageEncoder(object):
 
     @property
     def version_info(self):
-        return {'backend':self.backend,'version':subprocess.check_output([self.backend, '-version']),'cmdline':self.cmdline}
+        return {'backend':self.backend,'version':str(subprocess.check_output([self.backend, '-version'])),'cmdline':self.cmdline}
 
     def start(self):
         self.cmdline = (self.backend,
@@ -262,7 +271,7 @@ class ImageEncoder(object):
                      '-f', 'rawvideo',
                      '-s:v', '{}x{}'.format(*self.wh),
                      '-pix_fmt',('rgb32' if self.includes_alpha else 'rgb24'),
-                     '-i', '/dev/stdin',
+                     '-i', '-', # this used to be /dev/stdin, which is not Windows-friendly
 
                      # output
                      '-vcodec', 'libx264',
@@ -277,11 +286,14 @@ class ImageEncoder(object):
         if not isinstance(frame, (np.ndarray, np.generic)):
             raise error.InvalidFrame('Wrong type {} for {} (must be np.ndarray or np.generic)'.format(type(frame), frame))
         if frame.shape != self.frame_shape:
-            raise error.InvalidFrame("Your frame has shape {}, but the VideoRecorder is configured for shape {}.".format(frame_shape, self.frame_shape))
+            raise error.InvalidFrame("Your frame has shape {}, but the VideoRecorder is configured for shape {}.".format(frame.shape, self.frame_shape))
         if frame.dtype != np.uint8:
             raise error.InvalidFrame("Your frame has data type {}, but we require uint8 (i.e. RGB values from 0-255).".format(frame.dtype))
 
-        self.proc.stdin.write(frame.tobytes())
+        if distutils.version.StrictVersion(np.__version__) >= distutils.version.StrictVersion('1.9.0'):
+            self.proc.stdin.write(frame.tobytes())
+        else:
+            self.proc.stdin.write(frame.tostring())
 
     def close(self):
         self.proc.stdin.close()

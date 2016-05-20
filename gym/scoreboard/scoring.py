@@ -24,6 +24,21 @@ def score_from_remote(url):
     spec = gym.spec(env_id)
     return score_from_merged(episode_lengths, episode_rewards, timestamps, initial_reset_timestamp, spec.trials, spec.reward_threshold)
 
+def score_from_local(directory):
+    """Calculate score from a local results directory"""
+    results = gym.monitoring.monitor.load_results(directory)
+    # No scores yet saved
+    if results is None:
+        return None
+
+    episode_lengths = results['episode_lengths']
+    episode_rewards = results['episode_rewards']
+    timestamps = results['timestamps']
+    initial_reset_timestamp = results['initial_reset_timestamp']
+    spec = gym.spec(results['env_info']['env_id'])
+
+    return score_from_merged(episode_lengths, episode_rewards, timestamps, initial_reset_timestamp, spec.trials, spec.reward_threshold)
+
 def score_from_merged(episode_lengths, episode_rewards, timestamps, initial_reset_timestamp, trials, reward_threshold):
     """Method to calculate the score from merged monitor files.
     """
@@ -39,9 +54,9 @@ def score_from_merged(episode_lengths, episode_rewards, timestamps, initial_rese
     if len(episode_rewards) >= trials:
         means = running_mean(episode_rewards, trials)
         if reward_threshold is not None:
-            # Compute t-value by finding the first index above the
-            # threshold. It comes out as a singleton tuple.
-            (indexes_above_threshold, ) = np.where(means > reward_threshold)
+            # Compute t-value by finding the first index at or above
+            # the threshold. It comes out as a singleton tuple.
+            (indexes_above_threshold, ) = np.where(means >= reward_threshold)
             if len(indexes_above_threshold) > 0:
                 # Grab the first episode index that is above the threshold value
                 episode_t_value = indexes_above_threshold[0]
@@ -77,9 +92,13 @@ def running_mean(x, N):
 def compute_graph_stats(episode_lengths, episode_rewards, timestamps, initial_reset_timestamp, buckets):
     """Method to compute the aggregates for the graphs."""
     # Not a dependency of OpenAI Gym generally.
-    import scipy
+    import scipy.stats
 
     num_episodes = len(episode_lengths)
+
+    # Catch for if no files written which causes error with scipy.stats.binned_statistic
+    if num_episodes == 0:
+        return None
 
     episode_rewards = np.array(episode_rewards)
     episode_lengths = np.array(episode_lengths)

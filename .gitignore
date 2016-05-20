@@ -29,3 +29,10 @@ mujoco-bundle
 rllab_mujoco
 
 tutorial/*.html
+
+# IDE files
+.eggs
+.tox
+
+# PyCharm project files
+.idea

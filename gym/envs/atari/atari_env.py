@@ -6,8 +6,8 @@ from gym import utils
 
 try:
     import atari_py
-except ImportError:
-    raise error.DependencyNotInstalled("{}. (HINT: you can install Atari dependencies with 'pip install gym[atari].)'")
+except ImportError as e:
+    raise error.DependencyNotInstalled("{}. (HINT: you can install Atari dependencies with 'pip install gym[atari].)'".format(e))
 
 import logging
 logger = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ class AtariEnv(gym.Env, utils.EzPickle):
         reward = 0.0
         action = self._action_set[a]
         num_steps = np.random.randint(2, 5)
-        for _ in xrange(num_steps):
+        for _ in range(num_steps):
             reward += self.ale.act(action)
         ob = self._get_obs()
 
@@ -80,20 +80,21 @@ class AtariEnv(gym.Env, utils.EzPickle):
         self.ale.reset_game()
         return self._get_obs()
 
-    def _render(self, mode='human', close=False):        
+    def _render(self, mode='human', close=False):
         if close:
             if self.viewer is not None:
                 self.viewer.close()
+                self.viewer = None
             return
         img = self._get_image()
         if mode == 'rgb_array':
             return img
-        elif mode is 'human':
+        elif mode == 'human':
             from gym.envs.classic_control import rendering
             if self.viewer is None:
                 self.viewer = rendering.SimpleImageViewer()
             self.viewer.imshow(img)
-    
+
     def get_action_meanings(self):
         return [ACTION_MEANING[i] for i in self._action_set]
 

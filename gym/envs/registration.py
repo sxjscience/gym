@@ -1,9 +1,9 @@
 import logging
 import pkg_resources
 import re
-import six
 import sys
 from gym import error
+from gym.utils.atexit_utils import env_closer
 
 logger = logging.getLogger(__name__)
 # This format is true today, but it's *not* an official spec.
@@ -11,14 +11,8 @@ env_id_re = re.compile(r'^([\w:-]+)-v(\d+)$')
 
 def load(name):
     entry_point = pkg_resources.EntryPoint.parse('x={}'.format(name))
-    try:
-        result = entry_point.load(False)
-    except ImportError as e:
-        _, _, traceback = sys.exc_info()
-        new_e = ImportError("{} (while loading {})".format(e, name))
-        six.reraise(type(new_e), new_e, traceback)
-    else:
-        return result
+    result = entry_point.load(False)
+    return result
 
 class EnvSpec(object):
     """A specification for a particular instance of the environment. Used
@@ -26,7 +20,7 @@ class EnvSpec(object):
 
     Args:
         id (str): The official environment ID
-        entry_point (str): The Python entrypoint of the environment class (e.g. module.name:Class)
+        entry_point (Optional[str]): The Python entrypoint of the environment class (e.g. module.name:Class)
         timestep_limit (int): The max number of timesteps per episode during training
         trials (int): The number of trials to average reward over
         reward_threshold (Optional[int]): The reward threshold before the task is considered solved
@@ -38,7 +32,7 @@ class EnvSpec(object):
         trials (int): The number of trials run in official evaluation
     """
 
-    def __init__(self, id, entry_point, timestep_limit=1000, trials=100, reward_threshold=None, kwargs=None):
+    def __init__(self, id, entry_point=None, timestep_limit=1000, trials=100, reward_threshold=None, kwargs=None):
         self.id = id
         # Evaluation parameters
         self.timestep_limit = timestep_limit
@@ -50,24 +44,23 @@ class EnvSpec(object):
         match = env_id_re.search(id)
         if not match:
             raise error.Error('Attempted to register malformed environment ID: {}. (Currently all IDs must be of the form {}.)'.format(id, env_id_re.pattern))
+        self._env_name = match.group(1)
         self._entry_point = entry_point
         self._kwargs = {} if kwargs is None else kwargs
 
     def make(self):
         """Instantiates an instance of the environment with appropriate kwargs"""
+        if self._entry_point is None:
+            raise error.Error('Attempting to make deprecated env {}. (HINT: is there a newer registered version of this env?)'.format(self.id))
+
         cls = load(self._entry_point)
-        try:
-            env = cls(**self._kwargs)
-        except TypeError as e:
-            type, value, traceback = sys.exc_info()
-
-            # This likely indicates unsupported kwargs
-            six.reraise(type, """Could not 'make' {} ({}): {}.
-
-(For reference, the environment was instantiated with kwargs: {}).""".format(self.id, cls, e.message, self._kwargs), traceback)
+        env = cls(**self._kwargs)
 
         # Make the enviroment aware of which spec it came from.
         env.spec = self
+        # Register the env for atexit
+        env._close_called = False
+        env._env_exit_id = env_closer.register(env)
         return env
 
     def __repr__(self):
@@ -101,12 +94,20 @@ class EnvRegistry(object):
         try:
             return self.env_specs[id]
         except KeyError:
-            raise error.UnregisteredEnv('No registered env with id: {}'.format(id))
+            # Parse the env name and check to see if it matches the non-version
+            # part of a valid env (could also check the exact number here)
+            env_name = match.group(1)
+            matching_envs = [valid_env_name for valid_env_name, valid_env_spec in self.env_specs.items()
+                             if env_name == valid_env_spec._env_name]
+            if matching_envs:
+                raise error.DeprecatedEnv('Env {} not found (valid versions include {})'.format(id, matching_envs))
+            else:
+                raise error.UnregisteredEnv('No registered env with id: {}'.format(id))
 
-    def register(self, id, entry_point, **kwargs):
+    def register(self, id, **kwargs):
         if id in self.env_specs:
             raise error.Error('Cannot re-register id: {}'.format(id))
-        self.env_specs[id] = EnvSpec(id, entry_point, **kwargs)
+        self.env_specs[id] = EnvSpec(id, **kwargs)
 
 # Have a global registry
 registry = EnvRegistry()

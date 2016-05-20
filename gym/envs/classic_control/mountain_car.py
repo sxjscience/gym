@@ -31,6 +31,7 @@ class MountainCarEnv(gym.Env):
 
     def _step(self, action):
         # action = np.sign((self.state[0]+math.pi/2) * self.state[1])+1
+
         position, velocity = self.state
         velocity += (action-1)*0.001 + math.cos(3*position)*(-0.0025)
         if (velocity > self.max_speed): velocity = self.max_speed
@@ -57,6 +58,7 @@ class MountainCarEnv(gym.Env):
         if close:
             if self.viewer is not None:
                 self.viewer.close()
+                self.viewer = None
             return
 
         screen_width = 600
@@ -113,7 +115,5 @@ class MountainCarEnv(gym.Env):
         self.viewer.render()
         if mode == 'rgb_array':
             return self.viewer.get_array()
-        elif mode is 'human':
+        elif mode == 'human':
             pass
-        else:
-            return super(MountainCarEnv, self).render(mode=mode)
