@@ -54,13 +54,14 @@ register(
     id='CartPole-v0',
     entry_point='gym.envs.classic_control:CartPoleEnv',
     timestep_limit=200,
-    reward_threshold=195,
+    reward_threshold=195.0,
 )
 
 register(
     id='MountainCar-v0',
     entry_point='gym.envs.classic_control:MountainCarEnv',
     timestep_limit=200,
+    reward_threshold=-110.0,
 )
 
 register(
@@ -113,6 +114,7 @@ register(
     entry_point='gym.envs.toy_text:FrozenLakeEnv',
     kwargs={'map_name' : '4x4'},
     timestep_limit=100,
+    reward_threshold=0.78, # optimum = .8196
 )
 
 register(
@@ -120,6 +122,7 @@ register(
     entry_point='gym.envs.toy_text:FrozenLakeEnv',
     kwargs={'map_name' : '8x8'},
     timestep_limit=200,
+    reward_threshold=0.99, # optimum = 1
 )
 
 register(
@@ -138,6 +141,7 @@ register(
     id='Taxi-v1',
     entry_point='gym.envs.toy_text.taxi:TaxiEnv',
     timestep_limit=200,
+    reward_threshold=9.7, # optimum = 10.2
 )
 
 # Mujoco
@@ -164,16 +168,19 @@ register(
 register(
     id='HalfCheetah-v1',
     entry_point='gym.envs.mujoco:HalfCheetahEnv',
+    reward_threshold=4800.0,
 )
 
 register(
     id='Hopper-v1',
     entry_point='gym.envs.mujoco:HopperEnv',
+    reward_threshold=3800.0,
 )
 
 register(
     id='Swimmer-v1',
     entry_point='gym.envs.mujoco:SwimmerEnv',
+    reward_threshold=360.0,
 )
 
 register(
@@ -184,6 +191,7 @@ register(
 register(
     id='Ant-v1',
     entry_point='gym.envs.mujoco:AntEnv',
+    reward_threshold=6000.0,
 )
 
 register(
