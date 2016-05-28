@@ -15,7 +15,7 @@ specs = [spec for spec in envs.registry.all() if spec._entry_point is not None]
 @tools.params(*specs)
 def test_env(spec):
     # Skip mujoco tests for pull request CI
-    skip_mujoco = os.environ.get('MUJOCO_KEY_BUNDLE')
+    skip_mujoco = not os.environ.get('MUJOCO_KEY_BUNDLE')
     if skip_mujoco and spec._entry_point.startswith('gym.envs.mujoco:'):
         return
 
@@ -43,6 +43,8 @@ def test_env(spec):
     for mode in env.metadata.get('render.modes', []):
         env.render(mode=mode)
     env.render(close=True)
+
+    env.close()
 
 # Run a longer rollout on some environments
 def test_random_rollout():

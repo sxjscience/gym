@@ -388,6 +388,16 @@ The robot model was originally created by Tassa et al. [Tassa12]_.
 """,
 )
 
+add_task(
+    id='HumanoidStandup-v0',
+    group='mujoco',
+    summary="Make a 3D two-legged robot standup.",
+    description="""\
+Make a three-dimensional bipedal robot standup as fast as possible.
+""",
+    experimental=True,
+)
+
 # toy text
 
 add_task(
