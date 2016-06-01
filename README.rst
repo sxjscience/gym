@@ -77,7 +77,7 @@ On OSX:
 
 .. code:: shell
 
-	  brew install cmake boost boost-python sdl2
+	  brew install cmake boost boost-python sdl2 swig
 
 On Ubuntu 14.04:
 
@@ -200,6 +200,18 @@ These are a variety of classic control tasks, which would appear in a typical re
 
 	  import gym
 	  env = gym.make('CartPole-v0')
+	  env.reset()
+	  env.render()
+
+Doom
+---------------
+
+These tasks take place inside a Doom game (via the VizDoom project). If you didn't do the full install, you will need to run ``pip install -e '.[doom]'``. You can get started with them via:
+
+.. code:: python
+
+	  import gym
+	  env = gym.make('DoomBasic-v0')
 	  env.reset()
 	  env.render()
 

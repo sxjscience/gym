@@ -6,20 +6,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 import gym
-from gym import envs
+from gym import envs, spaces
+
+from test_envs import should_skip_env_spec_for_tests
 
 specs = [spec for spec in envs.registry.all() if spec._entry_point is not None]
 @tools.params(*specs)
 def test_env(spec):
-    # Skip mujoco tests for pull request CI
-    skip_mujoco = not (os.environ.get('MUJOCO_KEY_BUNDLE') or os.path.exists(os.path.expanduser('~/.mujoco')))
-    if skip_mujoco and spec._entry_point.startswith('gym.envs.mujoco:'):
+    if should_skip_env_spec_for_tests(spec):
         return
 
-    # TODO(jonas 2016-05-11): Re-enable these tests after fixing box2d-py
-    if spec._entry_point.startswith('gym.envs.box2d:'):
-        logger.warn("Skipping tests for box2d env {}".format(spec._entry_point))
-        return
+    # Note that this precludes running this test in multiple
+    # threads. However, we probably already can't do multithreading
+    # due to some environments.
+    spaces.seed(0)
 
     env1 = spec.make()
     env1.seed(0)
@@ -28,6 +28,8 @@ def test_env(spec):
     initial_observation1 = env1.reset()
     step_responses1 = [env1.step(action) for action in action_samples1]
     env1.close()
+
+    spaces.seed(0)
 
     env2 = spec.make()
     env2.seed(0)

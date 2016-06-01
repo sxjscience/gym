@@ -159,17 +159,20 @@ register(
 register(
     id='Reacher-v1',
     entry_point='gym.envs.mujoco:ReacherEnv',
-    timestep_limit=50
+    timestep_limit=50,
+    reward_threshold=-3.75,
 )
 
 register(
     id='InvertedPendulum-v1',
     entry_point='gym.envs.mujoco:InvertedPendulumEnv',
+    reward_threshold=950.0,
 )
 
 register(
     id='InvertedDoublePendulum-v1',
     entry_point='gym.envs.mujoco:InvertedDoublePendulumEnv',
+    reward_threshold=9100.0,
 )
 
 register(
@@ -206,7 +209,7 @@ register(
     entry_point='gym.envs.mujoco:HumanoidEnv',
 )
 register(
-    id='HumanoidStandup-v0',
+    id='HumanoidStandup-v1',
     entry_point='gym.envs.mujoco:HumanoidStandupEnv',
 )
 
@@ -336,4 +339,38 @@ register(
 register(
     id='DoomDeathmatch-v0',
     entry_point='gym.envs.doom:DoomDeathmatchEnv',
+)
+
+# Debugging
+# ----------------------------------------
+
+register(
+    id='OneRoundDeterministicReward-v0',
+    entry_point='gym.envs.debugging:OneRoundDeterministicRewardEnv',
+    local_only=True
+)
+
+register(
+    id='TwoRoundDeterministicReward-v0',
+    entry_point='gym.envs.debugging:TwoRoundDeterministicRewardEnv',
+    local_only=True
+)
+
+register(
+    id='OneRoundNondeterministicReward-v0',
+    entry_point='gym.envs.debugging:OneRoundNondeterministicRewardEnv',
+    local_only=True
+)
+
+register(
+    id='TwoRoundNondeterministicReward-v0',
+    entry_point='gym.envs.debugging:TwoRoundNondeterministicRewardEnv',
+    local_only=True,
+)
+
+# Hyperparameter tuning
+# ----------------------------------------
+register(
+    id='ConvergenceControl-v0',
+    entry_point='gym.envs.parameter_tuning:ConvergenceControl',
 )
