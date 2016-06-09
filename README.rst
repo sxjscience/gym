@@ -11,6 +11,15 @@ gym
 If you're not sure where to start, we recommend beginning with the
 `docs <https://gym.openai.com/docs>`_ on our site.
 
+A whitepaper for OpenAI Gym is available at http://arxiv.org/abs/1606.01540, and here's a BibTeX entry that you can use to cite it in a publication::
+
+	@misc{1606.01540,
+		Author = {Greg Brockman and Vicki Cheung and Ludwig Pettersson and Jonas Schneider and John Schulman and Jie Tang and Wojciech Zaremba},
+		Title = {OpenAI Gym},
+		Year = {2016},
+		Eprint = {arXiv:1606.01540},
+	}
+
 .. contents:: **Contents of this document**
    :depth: 2
 
@@ -187,7 +196,7 @@ Box2d is a 2D physics engine. You can install it via  ``pip install -e '.[box2d]
 .. code:: python
 
 	  import gym
-	  env = gym.make('LunarLander-v0')
+	  env = gym.make('LunarLander-v2')
 	  env.reset()
 	  env.render()
 
