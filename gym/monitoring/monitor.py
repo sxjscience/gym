@@ -78,7 +78,11 @@ class Monitor(object):
     """
 
     def __init__(self, env):
-        self.env = env
+        # Python's GC allows refcycles *or* for objects to have a
+        # __del__ method. So we need to maintain a weakref to env.
+        #
+        # https://docs.python.org/2/library/gc.html#gc.garbage
+        self._env_ref = weakref.ref(env)
         self.videos = []
 
         self.stats_recorder = None
@@ -88,7 +92,14 @@ class Monitor(object):
         self._monitor_id = None
         self.seeds = None
 
-    def start(self, directory, video_callable=None, force=False, resume=False, seed=None):
+    @property
+    def env(self):
+        env = self._env_ref()
+        if env is None:
+            raise error.Error("env has been garbage collected. To keep using a monitor, you must keep around a reference to the env object. (HINT: try assigning the env to a variable in your code.)")
+        return env
+
+    def start(self, directory, video_callable=None, force=False, resume=False, seed=None, write_upon_reset=False):
         """Start monitoring.
 
         Args:
@@ -97,6 +108,7 @@ class Monitor(object):
             force (bool): Clear out existing training data from this directory (by deleting every file prefixed with "openaigym.").
             resume (bool): Retain the training data already in this directory, which will be merged with our new data
             seed (Optional[int]): The seed to run this environment with. By default, a random seed will be chosen.
+            write_upon_reset (bool): Write the manifest file on each reset. (This is currently a JSON file, so writing it is somewhat expensive.)
         """
         if self.env.spec is None:
             logger.warn("Trying to monitor an environment which has no 'spec' set. This usually means you did not create it via 'gym.make', and is recommended only for advanced users.")
@@ -135,12 +147,16 @@ class Monitor(object):
         self.configure(video_callable=video_callable)
         if not os.path.exists(directory):
             os.mkdir(directory)
+        self.write_upon_reset = write_upon_reset
 
         seeds = self.env.seed(seed)
         self.seeds = seeds
 
-    def flush(self):
+    def flush(self, force=False):
         """Flush all relevant monitor information to disk."""
+        if not self.write_upon_reset and not force:
+            return
+
         self.stats_recorder.flush()
 
         # Give it a very distiguished name, since we need to pick it
@@ -167,28 +183,31 @@ class Monitor(object):
         self.stats_recorder.close()
         if self.video_recorder is not None:
             self._close_video_recorder()
-        self.flush()
+        self.flush(force=True)
 
-        # Note we'll close the env's rendering window even if we did
-        # not open it. There isn't a particular great way to know if
-        # we did, since some environments will have a window pop up
-        # during video recording.
-        try:
-            self.env.render(close=True)
-        except Exception as e:
-            if self.env.spec:
-                key = self.env.spec.id
-            else:
-                key = self.env
-            # We don't want to avoid writing the manifest simply
-            # because we couldn't close the renderer.
-            logger.error('Could not close renderer for %s: %s', key, e)
+        env = self._env_ref()
+        # Only take action if the env hasn't been GC'd
+        if env is not None:
+            # Note we'll close the env's rendering window even if we did
+            # not open it. There isn't a particular great way to know if
+            # we did, since some environments will have a window pop up
+            # during video recording.
+            try:
+                env.render(close=True)
+            except Exception as e:
+                if env.spec:
+                    key = env.spec.id
+                else:
+                    key = env
+                # We don't want to avoid writing the manifest simply
+                # because we couldn't close the renderer.
+                logger.error('Could not close renderer for %s: %s', key, e)
 
-        # Remove the env's pointer to this monitor
-        del self.env._monitor
+            # Remove the env's pointer to this monitor
+            del env._monitor
+
         # Stop tracking this for autoclose
         monitor_closer.unregister(self._monitor_id)
-
         self.enabled = False
 
         logger.info('''Finished writing results. You can upload them to the scoreboard via gym.upload(%r)''', self.directory)
@@ -211,7 +230,7 @@ class Monitor(object):
 
         # Add 1 since about to take another step
         if self.env.spec and self.stats_recorder.steps+1 >= self.env.spec.timestep_limit:
-            logger.info('Ending episode %i because it reached the timestep limit of %i.', self.episode_id, self.env.spec.timestep_limit)
+            logger.debug('Ending episode %i because it reached the timestep limit of %i.', self.episode_id, self.env.spec.timestep_limit)
             done = True
 
         # Record stats
@@ -274,10 +293,12 @@ class Monitor(object):
 
 def load_results(training_dir):
     if not os.path.exists(training_dir):
+        logger.error('Training directory %s not found', training_dir)
         return
 
     manifests = detect_training_manifests(training_dir)
     if not manifests:
+        logger.error('No manifests found in training directory %s', training_dir)
         return
 
     logger.debug('Uploading data from manifest %s', ', '.join(manifests))
@@ -329,6 +350,7 @@ def merge_stats_files(stats_files):
     for path in stats_files:
         with open(path) as f:
             content = json.load(f)
+            if len(content['timestamps'])==0: continue # so empty file doesn't mess up results, due to null initial_reset_timestamp
             timestamps += content['timestamps']
             episode_lengths += content['episode_lengths']
             episode_rewards += content['episode_rewards']
@@ -338,7 +360,12 @@ def merge_stats_files(stats_files):
     timestamps = np.array(timestamps)[idxs].tolist()
     episode_lengths = np.array(episode_lengths)[idxs].tolist()
     episode_rewards = np.array(episode_rewards)[idxs].tolist()
-    initial_reset_timestamp = min(initial_reset_timestamps)
+    
+    if len(initial_reset_timestamps) > 0:
+        initial_reset_timestamp = min(initial_reset_timestamps)
+    else:
+        initial_reset_timestamp = 0
+        
     return timestamps, episode_lengths, episode_rewards, initial_reset_timestamp
 
 def collapse_env_infos(env_infos, training_dir):

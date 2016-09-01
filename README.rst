@@ -212,18 +212,6 @@ These are a variety of classic control tasks, which would appear in a typical re
 	  env.reset()
 	  env.render()
 
-Doom
----------------
-
-These tasks take place inside a Doom game (via the VizDoom project). If you didn't do the full install, you will need to run ``pip install -e '.[doom]'``. You can get started with them via:
-
-.. code:: python
-
-	  import gym
-	  env = gym.make('DoomBasic-v0')
-	  env.reset()
-	  env.render()
-
 MuJoCo
 ------
 
@@ -276,6 +264,10 @@ You can also run tests in a specific directory by using the ``-s`` option, or by
 What's new
 ----------
 
+- 2016-08-17: Calling `close` on an env will also close the monitor
+  and any rendering windows.
+- 2016-08-17: The monitor will no longer write manifest files in
+  real-time, unless `write_upon_reset=True` is passed.
 - 2016-05-28: For controlled reproducibility, envs now support seeding
   (cf #91 and #135). The monitor records which seeds are used. We will
   soon add seed information to the display on the scoreboard.

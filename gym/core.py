@@ -2,9 +2,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 import numpy as np
+import weakref
 
 from gym import error, monitoring
-from gym.utils import closer
+from gym.utils import closer, reraise
 
 env_closer = closer.Closer()
 
@@ -40,6 +41,8 @@ class Env(object):
         observation_space: The Space object corresponding to valid observations
         reward_range: A tuple corresponding to the min and max possible rewards
 
+    Note: a default reward range set to [-inf,+inf] already exists. Set it if you want a narrower range.
+
     The methods are accessed publicly as "step", "reset", etc.. The
     non-underscored versions are wrapper methods to which we may add
     functionality over time.
@@ -47,11 +50,12 @@ class Env(object):
 
     def __new__(cls, *args, **kwargs):
         # We use __new__ since we want the env author to be able to
-        # override __init__ without remebering to call super.
+        # override __init__ without remembering to call super.
         env = super(Env, cls).__new__(cls)
         env._env_closer_id = env_closer.register(env)
         env._closed = False
         env._configured = False
+        env._unwrapped = None
 
         # Will be automatically set when creating an environment via 'make'
         env.spec = None
@@ -193,6 +197,10 @@ class Env(object):
         if not hasattr(self, '_closed') or self._closed:
             return
 
+        # Automatically close the monitor and any render window
+        self.monitor.close()
+        self.render(close=True)
+
         self._close()
         env_closer.unregister(self._env_closer_id)
         # If an error occurs before this line, it's possible to
@@ -226,7 +234,34 @@ class Env(object):
         """
 
         self._configured = True
-        return self._configure(*args, **kwargs)
+
+        try:
+            return self._configure(*args, **kwargs)
+        except TypeError as e:
+            # It can be confusing if you have the wrong environment
+            # and try calling with unsupported arguments, since your
+            # stack trace will only show core.py.
+            if self.spec:
+                reraise(suffix='(for {})'.format(self.spec.id))
+            else:
+                raise
+
+    @property
+    def unwrapped(self):
+        """Completely unwrap this env.
+
+        Notes:
+            EXPERIMENTAL: may be removed in a later version of Gym
+
+            This is a dynamic property in order to avoid refcycles.
+
+        Returns:
+            gym.Env: The base non-wrapped gym.Env instance
+        """
+        if self._unwrapped is not None:
+            return self._unwrapped
+        else:
+            return self
 
     def __del__(self):
         self.close()
@@ -237,10 +272,9 @@ class Env(object):
 # Space-related abstractions
 
 class Space(object):
-    """
-    Provides a classification state spaces and action spaces,
-    so you can write generic code that applies to any Environment.
-    E.g. to choose a random action.
+    """Defines the observation and action spaces, so you can write generic
+    code that applies to any Env. For example, you can choose a random
+    action.
     """
 
     def sample(self, seed=0):
@@ -265,3 +299,47 @@ class Space(object):
         """Convert a JSONable data type to a batch of samples from this space."""
         # By default, assume identity is JSONable
         return sample_n
+
+class Wrapper(Env):
+    def __init__(self, env):
+        self.env = env
+        self.metadata = env.metadata
+        self.action_space = env.action_space
+        self.observation_space = env.observation_space
+        self.reward_range = env.reward_range
+        self._spec = env.spec
+        self._unwrapped = env.unwrapped
+
+    def _step(self, action):
+        return self.env.step(action)
+
+    def _reset(self):
+        return self.env.reset()
+
+    def _render(self, mode='human', close=False):
+        return self.env.render(mode, close)
+
+    def _close(self):
+        return self.env.close()
+
+    def _configure(self, *args, **kwargs):
+        return self.env.configure(*args, **kwargs)
+
+    def _seed(self, seed=None):
+        return self.env.seed(seed)
+
+    def __str__(self):
+        return '<{}{} instance>'.format(type(self).__name__, self.env)
+
+    @property
+    def spec(self):
+        if self._spec is None:
+            self._spec = self.env.spec
+        return self._spec
+
+    @spec.setter
+    def spec(self, spec):
+        # Won't have an env attr while in the __new__ from gym.Env
+        if hasattr(self, 'env'):
+            self.env.spec = spec
+        self._spec = spec

@@ -58,10 +58,24 @@ register(
 )
 
 register(
+    id='CartPole-v1',
+    entry_point='gym.envs.classic_control:CartPoleEnv',
+    timestep_limit=500,
+    reward_threshold=475.0,
+)
+
+register(
     id='MountainCar-v0',
     entry_point='gym.envs.classic_control:MountainCarEnv',
     timestep_limit=200,
     reward_threshold=-110.0,
+)
+
+register(
+    id='MountainCarContinuous-v0',
+    entry_point='gym.envs.classic_control:Continuous_MountainCarEnv',
+    timestep_limit=999,
+    reward_threshold=90.0,
 )
 
 register(
@@ -71,10 +85,9 @@ register(
 )
 
 register(
-    id='Acrobot-v0',
+    id='Acrobot-v1',
     entry_point='gym.envs.classic_control:AcrobotEnv',
-    timestep_limit=200,
-    reward_threshold=-100
+    timestep_limit=500,
 )
 
 # Box2d
@@ -83,6 +96,13 @@ register(
 register(
     id='LunarLander-v2',
     entry_point='gym.envs.box2d:LunarLander',
+    timestep_limit=1000,
+    reward_threshold=200,
+)
+
+register(
+    id='LunarLanderContinuous-v2',
+    entry_point='gym.envs.box2d:LunarLanderContinuous',
     timestep_limit=1000,
     reward_threshold=200,
 )
@@ -260,6 +280,20 @@ for game in ['air_raid', 'alien', 'amidar', 'assault', 'asterix', 'asteroids', '
             nondeterministic=nondeterministic,
         )
 
+        if game == 'space_invaders':
+            frameskip = 3
+        else:
+            frameskip = 4
+
+        register(
+            # Use a deterministic frame skip.
+            id='{}Deterministic-v0'.format(name),
+            entry_point='gym.envs.atari:AtariEnv',
+            kwargs={'game': game, 'obs_type': obs_type, 'frameskip': frameskip},
+            timestep_limit=10000,
+            nondeterministic=nondeterministic,
+        )
+
 # Board games
 # ----------------------------------------
 
@@ -303,84 +337,6 @@ register(
         'illegal_move_mode': 'lose',
         'board_size': 9,
     },
-)
-
-# Doom
-# ----------------------------------------
-
-register(
-    id='meta-Doom-v0',
-    entry_point='gym.envs.doom:MetaDoomEnv',
-    timestep_limit=999999,
-    reward_threshold=9000.0,
-    kwargs={
-        'average_over': 3,
-        'passing_grade': 600,
-        'min_tries_for_avg': 3
-    },
-)
-
-register(
-    id='DoomBasic-v0',
-    entry_point='gym.envs.doom:DoomBasicEnv',
-    timestep_limit=10000,
-    reward_threshold=10.0,
-)
-
-register(
-    id='DoomCorridor-v0',
-    entry_point='gym.envs.doom:DoomCorridorEnv',
-    timestep_limit=10000,
-    reward_threshold=1000.0,
-)
-
-register(
-    id='DoomDefendCenter-v0',
-    entry_point='gym.envs.doom:DoomDefendCenterEnv',
-    timestep_limit=10000,
-    reward_threshold=10.0,
-)
-
-register(
-    id='DoomDefendLine-v0',
-    entry_point='gym.envs.doom:DoomDefendLineEnv',
-    timestep_limit=10000,
-    reward_threshold=15.0,
-)
-
-register(
-    id='DoomHealthGathering-v0',
-    entry_point='gym.envs.doom:DoomHealthGatheringEnv',
-    timestep_limit=10000,
-    reward_threshold=1000.0,
-)
-
-register(
-    id='DoomMyWayHome-v0',
-    entry_point='gym.envs.doom:DoomMyWayHomeEnv',
-    timestep_limit=10000,
-    reward_threshold=0.5,
-)
-
-register(
-    id='DoomPredictPosition-v0',
-    entry_point='gym.envs.doom:DoomPredictPositionEnv',
-    timestep_limit=10000,
-    reward_threshold=0.5,
-)
-
-register(
-    id='DoomTakeCover-v0',
-    entry_point='gym.envs.doom:DoomTakeCoverEnv',
-    timestep_limit=10000,
-    reward_threshold=750.0,
-)
-
-register(
-    id='DoomDeathmatch-v0',
-    entry_point='gym.envs.doom:DoomDeathmatchEnv',
-    timestep_limit=10000,
-    reward_threshold=20.0,
 )
 
 # Debugging
