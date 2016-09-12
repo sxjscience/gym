@@ -150,6 +150,9 @@ class Monitor(object):
         self.write_upon_reset = write_upon_reset
 
         seeds = self.env.seed(seed)
+        if not isinstance(seeds, list):
+            logger.warn('env.seed returned unexpected result: %s (should be a list of ints)', seeds)
+
         self.seeds = seeds
 
     def flush(self, force=False):
@@ -204,7 +207,8 @@ class Monitor(object):
                 logger.error('Could not close renderer for %s: %s', key, e)
 
             # Remove the env's pointer to this monitor
-            del env._monitor
+            if hasattr(env, '_monitor'):
+                del env._monitor
 
         # Stop tracking this for autoclose
         monitor_closer.unregister(self._monitor_id)
@@ -360,12 +364,12 @@ def merge_stats_files(stats_files):
     timestamps = np.array(timestamps)[idxs].tolist()
     episode_lengths = np.array(episode_lengths)[idxs].tolist()
     episode_rewards = np.array(episode_rewards)[idxs].tolist()
-    
+
     if len(initial_reset_timestamps) > 0:
         initial_reset_timestamp = min(initial_reset_timestamps)
     else:
         initial_reset_timestamp = 0
-        
+
     return timestamps, episode_lengths, episode_rewards, initial_reset_timestamp
 
 def collapse_env_infos(env_infos, training_dir):
